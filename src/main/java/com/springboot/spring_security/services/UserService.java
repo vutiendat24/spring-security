@@ -11,44 +11,70 @@ import com.springboot.spring_security.models.User;
 import com.springboot.spring_security.repositories.UserRepository;
 import com.springboot.spring_security.ultils.Mapper;
 
-import lombok.AllArgsConstructor;
+import java.util.List;
+import java.util.ArrayList;
+import com.springboot.spring_security.repositories.RoleRepository;
+import com.springboot.spring_security.models.Role;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@AllArgsConstructor
 public class UserService {
-    UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final JWTService jwtService;
 
-    public UserDTO createUser(User user){
+    public String login(String username, String password) {
+        User user = userRepository.findByUserName(username);
+        if (user == null) {
+            throw new RuntimeException("Người dùng không tồn tại");
+        }
+
+        // So sánh mật khẩu
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Sai mật khẩu");
+        }
+
+        // Trả về Token xịn
+        return jwtService.generateAccessToken(user);
+    }
+
+    public UserDTO createUser(User user) {
         // check user exists
-        if(userRepository.findByUserName(user.getUserName()) != null){
+        if (userRepository.findByUserName(user.getUserName()) != null) {
             throw new RuntimeException("User already exists");
         }
         // check email exists
-        if(userRepository.findByEmail(user.getEmail()) != null){
+        if (userRepository.findByEmail(user.getEmail()) != null) {
             throw new RuntimeException("Email already exists");
         }
         // check phone exists
-        if(userRepository.findByPhone(user.getPhone()) != null){
+        if (userRepository.findByPhone(user.getPhone()) != null) {
             throw new RuntimeException("Phone already exists");
         }
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        List<Role> defaultRoles = new ArrayList<>();
+        defaultRoles
+                .add(roleRepository.findById("USER").orElseThrow(() -> new RuntimeException("Role not found: USER")));
+        user.setRoles(defaultRoles);
+
         return Mapper.toUserDTO(userRepository.save(user));
 
     }
 
-    public UserDTO getUserById(UUID id){
+    public UserDTO getUserById(UUID id) {
         return userRepository.findById(id).map(user -> {
             UserDTO userDTO = new UserDTO();
             userDTO.setUserName(user.getUserName());
             userDTO.setFullName(user.getFullName());
             userDTO.setPhone(user.getPhone());
             userDTO.setSex(user.getSex());
-            userDTO.setRoles(user.getRoles());
             return userDTO;
         }).orElse(null);
     }
-    
+
 }

@@ -10,7 +10,6 @@ public class Mapper {
         userDTO.setFullName(user.getFullName());
         userDTO.setPhone(user.getPhone());
         userDTO.setSex(user.getSex());
-        userDTO.setRoles(user.getRoles());
         return userDTO;
     }
     public static User toUser(UserDTO userDTO){
@@ -19,7 +18,6 @@ public class Mapper {
         user.setFullName(userDTO.getFullName());
         user.setPhone(userDTO.getPhone());
         user.setSex(userDTO.getSex());
-        user.setRoles(userDTO.getRoles());
         return user;
     }
 }
