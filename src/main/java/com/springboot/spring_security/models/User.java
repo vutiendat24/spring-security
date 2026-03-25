@@ -9,7 +9,9 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.util.List;
 import java.util.UUID;
+import jakarta.persistence.ManyToMany;
 
 @Entity
 @Getter
@@ -29,4 +31,6 @@ public class User {
     String fullName;
     String phone;
     String sex;
+    @ManyToMany
+    List<Role> roles;
 }

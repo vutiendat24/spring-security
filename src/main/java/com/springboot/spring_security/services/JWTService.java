@@ -4,11 +4,9 @@ package com.springboot.spring_security.services;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
-import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.springboot.spring_security.models.User;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.util.Date;
+import java.util.StringJoiner;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -26,13 +25,14 @@ public class JWTService {
     @Value("${jwt.secret_key}")
     String SECRET_KEY;
 
+
     public String generateAccessToken(User user){
         try {
             JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                     .issuer("TienDatCompany")
                     .subject(user.getUserID().toString())
-                    .claim("role","USER")
+                    .claim("scope", buildScope(user))
                     .issueTime(Date.from(Instant.now()))
                     .expirationTime(Date.from(Instant.now().plus(5, ChronoUnit.MINUTES)))
                     .build();
@@ -65,6 +65,21 @@ public class JWTService {
         }
 
         return true;
+    }
+// thêm scope vào token bao gồm role và permission
+    private String buildScope(User user){
+        StringJoiner stringJoiner = new StringJoiner(" ");
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            user.getRoles().forEach(role -> {
+                stringJoiner.add("ROLE_" + role.getRoleName());
+                if (role.getPermissions() != null && !role.getPermissions().isEmpty()) {
+                    role.getPermissions().forEach(permission -> {
+                        stringJoiner.add(permission.getPermissionName());
+                    });
+                }
+            });
+        }
+        return stringJoiner.toString();
     }
 
 }
