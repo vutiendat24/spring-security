@@ -9,5 +9,11 @@ import com.springboot.spring_security.models.User;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
+
+    User findByUserName(String userName);
+
+    User findByPhone(String phone);
+
+    User findByEmail(String email);
     
 }
