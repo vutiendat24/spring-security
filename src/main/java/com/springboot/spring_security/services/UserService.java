@@ -28,6 +28,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final JWTService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public AuthResponse login(String username, String password) {
         User user = userRepository.findByUserName(username);
@@ -69,8 +70,19 @@ public class UserService {
     }
 
     @Transactional
-    public void logout(String refreshTokenStr) {
+    public void logout(String refreshTokenStr, String accessToken) {
         refreshTokenService.revokeToken(refreshTokenStr);
+
+        // Blacklist access token hiện tại để không thể dùng lại
+        try {
+            String jti = jwtService.extractJti(accessToken);
+            java.util.Date expiration = jwtService.extractExpiration(accessToken);
+            if (jti != null) {
+                tokenBlacklistService.blacklistAccessToken(jti, expiration);
+            }
+        } catch (Exception e) {
+            // Access token có thể không hợp lệ (đã hết hạn), bỏ qua
+        }
     }
 
     @Transactional
@@ -78,6 +90,9 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
         refreshTokenService.revokeAllTokensByUser(user);
+
+        // Blacklist tất cả access token của user
+        tokenBlacklistService.blacklistAllTokensOfUser(userId.toString());
     }
 
     public UserDTO createUser(User user) {

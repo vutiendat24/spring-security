@@ -48,8 +48,14 @@ public class UserController {
      * Endpoint này KHÔNG cần Authorization header
      */
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        userService.logout(request.getRefreshToken());
+    public ResponseEntity<String> logout(@Valid @RequestBody RefreshTokenRequest request,
+                                         jakarta.servlet.http.HttpServletRequest httpRequest) {
+        String accessToken = null;
+        String authHeader = httpRequest.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            accessToken = authHeader.substring(7);
+        }
+        userService.logout(request.getRefreshToken(), accessToken);
         return ResponseEntity.ok("Đăng xuất thành công");
     }
 

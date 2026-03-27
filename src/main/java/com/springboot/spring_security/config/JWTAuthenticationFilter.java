@@ -2,6 +2,7 @@ package com.springboot.spring_security.config;
 
 import com.nimbusds.jwt.SignedJWT;
 import com.springboot.spring_security.services.JWTService;
+import com.springboot.spring_security.services.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,7 @@ import java.util.List;
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
     private final JWTService jwtService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -42,7 +44,22 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             if (jwtService.validToken(jwt) && SecurityContextHolder.getContext().getAuthentication() == null) {
                 SignedJWT signedJWT = SignedJWT.parse(jwt);
                 String userId = signedJWT.getJWTClaimsSet().getSubject();
+                String jti = signedJWT.getJWTClaimsSet().getJWTID();
                 String scope = signedJWT.getJWTClaimsSet().getStringClaim("scope");
+
+                // Kiểm tra token có bị blacklist không (theo jti)
+                if (jti != null && tokenBlacklistService.isBlacklisted(jti)) {
+                    log.warn("Access token jti={} đã bị blacklist", jti);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                // Kiểm tra user có bị revoke-all không
+                if (tokenBlacklistService.isUserTokensRevoked(userId, signedJWT.getJWTClaimsSet().getIssueTime())) {
+                    log.warn("Tất cả token của user={} đã bị thu hồi", userId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                 if (scope != null && !scope.isBlank()) {
@@ -66,4 +83,3 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 }
-

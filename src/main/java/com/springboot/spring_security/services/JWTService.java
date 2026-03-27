@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.util.Date;
+import java.util.UUID;
 import java.util.StringJoiner;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -35,9 +36,10 @@ public class JWTService {
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                     .issuer("TienDatCompany")
                     .subject(user.getUserID().toString())
+                    .jwtID(UUID.randomUUID().toString())
                     .claim("scope", buildScope(user))
                     .issueTime(Date.from(Instant.now()))
-                    .expirationTime(Date.from(Instant.now().plus(5, ChronoUnit.MINUTES)))
+                    .expirationTime(Date.from(Instant.now().plus(ACCESS_TOKEN_EXPIRY_SECONDS, ChronoUnit.SECONDS)))
                     .build();
             SignedJWT signedJWT = new SignedJWT(header,claimsSet);
             JWSSigner jwsSigner = new MACSigner(SECRET_KEY.getBytes());
@@ -55,12 +57,11 @@ public class JWTService {
         SignedJWT signedJWT = SignedJWT.parse(token);
         JWSVerifier jwsVerifier = new MACVerifier(SECRET_KEY.getBytes());
 
-//        check chữ ký có hợp lệ hay ko
         if(!signedJWT.verify(jwsVerifier)){
             log.error("Token have signature invalid");
             return false;
         }
-//        check token còn hạn hay ko
+
         Date expriredTime = Date.from(Instant.now());
         if(signedJWT.getJWTClaimsSet().getExpirationTime().before(expriredTime)){
             log.error("Token was exprired");
@@ -69,7 +70,22 @@ public class JWTService {
 
         return true;
     }
-// thêm scope vào token bao gồm role và permission
+
+    public String extractJti(String token) throws ParseException {
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        return signedJWT.getJWTClaimsSet().getJWTID();
+    }
+
+    public Date extractIssuedAt(String token) throws ParseException {
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        return signedJWT.getJWTClaimsSet().getIssueTime();
+    }
+
+    public Date extractExpiration(String token) throws ParseException {
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        return signedJWT.getJWTClaimsSet().getExpirationTime();
+    }
+
     private String buildScope(User user){
         StringJoiner stringJoiner = new StringJoiner(" ");
         if (user.getRoles() != null && !user.getRoles().isEmpty()) {
@@ -86,3 +102,4 @@ public class JWTService {
     }
 
 }
+
