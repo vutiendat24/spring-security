@@ -5,8 +5,11 @@ import java.util.UUID;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.springboot.spring_security.DTO.res.AuthResponse;
 import com.springboot.spring_security.DTO.res.UserDTO;
+import com.springboot.spring_security.models.RefreshToken;
 import com.springboot.spring_security.models.User;
 import com.springboot.spring_security.repositories.UserRepository;
 import com.springboot.spring_security.ultils.Mapper;
@@ -24,33 +27,66 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JWTService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
-    public String login(String username, String password) {
+    public AuthResponse login(String username, String password) {
         User user = userRepository.findByUserName(username);
         if (user == null) {
             throw new RuntimeException("Người dùng không tồn tại");
         }
 
-        // So sánh mật khẩu
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Sai mật khẩu");
         }
 
-        // Trả về Token xịn
-        return jwtService.generateAccessToken(user);
+        String accessToken = jwtService.generateAccessToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .accessTokenExpiresIn(JWTService.ACCESS_TOKEN_EXPIRY_SECONDS)
+                .refreshTokenExpiresIn(refreshTokenService.getRefreshTokenExpirySeconds())
+                .build();
+    }
+
+    @Transactional
+    public AuthResponse refresh(String refreshTokenStr) {
+        RefreshToken oldRefreshToken = refreshTokenService.validateRefreshToken(refreshTokenStr);
+        User user = oldRefreshToken.getUser();
+
+        RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(oldRefreshToken);
+
+        String accessToken = jwtService.generateAccessToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(newRefreshToken.getToken())
+                .accessTokenExpiresIn(JWTService.ACCESS_TOKEN_EXPIRY_SECONDS)
+                .refreshTokenExpiresIn(refreshTokenService.getRefreshTokenExpirySeconds())
+                .build();
+    }
+
+    @Transactional
+    public void logout(String refreshTokenStr) {
+        refreshTokenService.revokeToken(refreshTokenStr);
+    }
+
+    @Transactional
+    public void logoutAll(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+        refreshTokenService.revokeAllTokensByUser(user);
     }
 
     public UserDTO createUser(User user) {
-        // check user exists
         if (userRepository.findByUserName(user.getUserName()) != null) {
             throw new RuntimeException("User already exists");
         }
-        // check email exists
         if (userRepository.findByEmail(user.getEmail()) != null) {
             throw new RuntimeException("Email already exists");
         }
-        // check phone exists
         if (userRepository.findByPhone(user.getPhone()) != null) {
             throw new RuntimeException("Phone already exists");
         }
@@ -78,3 +114,4 @@ public class UserService {
     }
 
 }
+

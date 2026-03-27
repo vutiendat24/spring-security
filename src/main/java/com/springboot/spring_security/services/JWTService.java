@@ -25,6 +25,9 @@ public class JWTService {
     @Value("${jwt.secret_key}")
     String SECRET_KEY;
 
+    // Access token sống 5 phút
+    public static final long ACCESS_TOKEN_EXPIRY_SECONDS = 5 * 60;
+
 
     public String generateAccessToken(User user){
         try {

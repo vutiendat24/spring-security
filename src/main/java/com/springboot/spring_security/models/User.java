@@ -36,4 +36,5 @@ public class User {
     String sex;
     @ManyToMany
     List<Role> roles;
+    boolean isActive = false ;
 }

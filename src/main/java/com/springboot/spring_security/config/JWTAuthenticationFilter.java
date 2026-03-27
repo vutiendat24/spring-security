@@ -59,12 +59,11 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             }
             
             
+            filterChain.doFilter(request, response);
         } catch (Exception e) {
             log.error("Cannot set user authentication: ", e);
             filterChain.doFilter(request, response);
         }
-        filterChain.doFilter(request, response);
     }
 }
-// các bước để xác thực và phân quyền trong spring security
 
