@@ -12,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 public class APIResponse<T> {
     T data;
     String message;
-    int status;
+    int code;
 
     public static <T> APIResponse<T> success(T data, String message) {
         return new APIResponse<>(data, message, 200);

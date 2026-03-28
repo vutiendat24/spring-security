@@ -17,7 +17,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(APIResponse.<Void>builder()
-                        .status(errorCode.getCode())
+                        .code(errorCode.getCode())
                         .message(errorCode.getMessage())
                         .build());
     }
@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(APIResponse.<Void>builder()
-                        .status(errorCode.getCode())
+                        .code(errorCode.getCode())
                         .message(exception.getMessage())
                         .build());
     }

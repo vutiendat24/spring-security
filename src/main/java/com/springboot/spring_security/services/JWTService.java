@@ -6,6 +6,8 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.springboot.spring_security.exception.AppException;
+import com.springboot.spring_security.exception.ErrorCode;
 import com.springboot.spring_security.models.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,13 +61,13 @@ public class JWTService {
 
         if(!signedJWT.verify(jwsVerifier)){
             log.error("Token have signature invalid");
-            return false;
+            throw new AppException(ErrorCode.TOKEN_INVALID);
         }
 
         Date expriredTime = Date.from(Instant.now());
         if(signedJWT.getJWTClaimsSet().getExpirationTime().before(expriredTime)){
             log.error("Token was exprired");
-            return false;
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
         }
 
         return true;

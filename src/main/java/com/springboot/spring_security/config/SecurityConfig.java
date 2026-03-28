@@ -13,7 +13,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
-
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDenyHandler accessDeniedHandler;
     @Bean
     public SecurityFilterChain securedFilterChain(HttpSecurity http) throws Exception {
         http
@@ -26,6 +27,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/permission/**").hasRole("ADMIN")
                         .requestMatchers("/api/role/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling((exception) -> 
+                    exception.authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
